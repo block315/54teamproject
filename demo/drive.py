@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+'''ev3dev 가 작동하는지 확인'''
 from time import sleep
 from ev3dev2.motor import LargeMotor, SpeedPercent, MoveTank, MediumMotor, OUTPUT_A, OUTPUT_B, OUTPUT_C
 from ev3dev2.sensor import INPUT_1, INPUT_2, INPUT_3, INPUT_4
