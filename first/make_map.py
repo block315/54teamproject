@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import csv
 
 class map_for_robot:
