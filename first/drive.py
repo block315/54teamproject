@@ -33,7 +33,7 @@ class ev3robot:
         robot_tire_diameter = 68.6 # must be accurate (mm)
         robot_balance = [1,1] # left and right motor output has to be same. must be lower than 1
         robot_width = 120 # distance between right wheel and left wheel (mm)
-    robot_start_position = [2700,1300,-90] # ev3 starting position for map (mm)
+    robot_start_position = [2700,1350,-90] # ev3 starting position for map (mm)
     ################
 
     def __init__(self, LargeMotor_port_1 = OUTPUT_A, LargeMotor_port_2 = OUTPUT_D, UltrasonicSensor_port = INPUT_3):
@@ -52,11 +52,14 @@ class ev3robot:
         if robot_direction == "forward":
             self.ev3_engine.on_for_rotations(self.robot_balance[0]*robot_speed,self.robot_balance[1]*robot_speed, motor_rotating_amount)
             self.ev3_engine.wait_until_not_moving()
+            sleep(1)
             self.ev3_position_update(safe_distance)
         elif robot_direction == "backward":
             self.ev3_engine.on_for_rotations(self.robot_balance[0]* -1 * robot_speed,self.robot_balance[0]* -1 * robot_speed, motor_rotating_amount)
             self.ev3_engine.wait_until_not_moving()
+            sleep(1)
             self.ev3_position_update(safe_distance)
+            self.ev3_search()
 
     def ev3_position_update(self, safe_distance):
         sleep(2) # robot slides...
@@ -69,7 +72,7 @@ class ev3robot:
             self.ev3_map.iloc[round(self.ev3_position[1]/10)-1,round(self.ev3_position[0]/10)-1] = 1
             print("robot position - x :", self.ev3_position[0],"y :",self.ev3_position[1])
         except:
-            print("error" + self.ev3_position)
+            print("error" + str(self.ev3_position))
 
     def ev3_turn(self, direction = "left", angle = 90, robot_speed = SpeedPercent(30)):
         self.ev3_engine.wait_until_not_moving()
@@ -81,6 +84,8 @@ class ev3robot:
         elif direction == "right":
             self.ev3_engine.on_for_rotations(robot_speed,-1 * robot_speed, motor_rotating_amount)
             self.ev3_position[2] += angle
+        sleep(1)
+        self.ev3_search()
 
     def ev3_search(self):
         self.ev3_engine.wait_until_not_moving()
@@ -99,6 +104,7 @@ class ev3robot:
             print("barrier position - x :",barrier_position[0],"y :", barrier_position[1])
         except:
             print('error : map is too small')
+        sleep(1)
 
     def ev3_map_update(self,x,y,area=20,poss=1/1.05):
         x -= 1
@@ -108,28 +114,84 @@ class ev3robot:
 
     
     def ev3_localization(self):
-        self.ev3_search()
         for i in range(8):
             self.ev3_turn("left",45)
-            sleep(1.5)
-            self.ev3_search()
-            sleep(1.5)
 
-    def main(self):
-        ### robot act code ###
-        for i in range(5):
-            if self.ev3_eye.distance_centimeters < 30:
-                self.ev3_turn("left")
-                sleep(3)
-            else:
-                self.ev3_walk("forward",10)
-                sleep(5)
-                self.ev3_localization()
-        ########
-        
     def export_map(self):
         self.ev3_map.to_csv('arena.csv', encoding='utf-8', index=False, header=False)
 
+    def rotate_to(self,degree):
+        while True:
+            if degree%360 == self.ev3_position[2]%360:
+                break
+            else:
+                a = (degree%360) - (self.ev3_position[2]%360)
+                if (0<= a <=90)or(a<=-270):
+                    self.ev3_turn("right",45)
+                else:
+                    self.ev3_turn("left",45)
+
+
+    def go_to(self,ax,pos):
+        while True:
+            if ax == 'x':
+                if abs(pos-self.ev3_position[0]) < 100:
+                    break
+                else:
+                    if pos > self.ev3_position[0]:
+                        self.rotate_to(90)
+                        safe_distance = self.ev3_eye.distance_centimeters
+                        if safe_distance > 25:
+                            self.ev3_walk()
+                            continue
+                    elif pos < self.ev3_position[0]:
+                        self.rotate_to(-90)
+                        safe_distance = self.ev3_eye.distance_centimeters
+                        if safe_distance > 25:
+                            self.ev3_walk()
+                            continue                    
+                    self.rotate_to(0)
+                    safe_distance = self.ev3_eye.distance_centimeters
+                    if safe_distance > 25:
+                        self.ev3_walk()
+                    else:
+                        self.rotate_to(180)
+                        self.ev3_walk()
+                        
+            elif ax == 'y':
+                if abs(pos-self.ev3_position[1]) < 100:
+                    break
+                else:
+                    if pos > self.ev3_position[1]:
+                        self.rotate_to(0)
+                        safe_distance = self.ev3_eye.distance_centimeters
+                        if safe_distance > 25:
+                            self.ev3_walk()
+                            continue
+                    elif pos < self.ev3_position[1]:
+                        self.rotate_to(180)
+                        safe_distance = self.ev3_eye.distance_centimeters
+                        if safe_distance > 25:
+                            self.ev3_walk()
+                            continue                    
+                    self.rotate_to(90)
+                    safe_distance = self.ev3_eye.distance_centimeters
+                    if safe_distance > 25:
+                        self.ev3_walk()
+                    else:
+                        self.rotate_to(270)
+                        self.ev3_walk()
+            else:
+                print("can't find destination")
+
+    def main(self):
+        ### robot act code ###
+        self.ev3_localization()
+        self.go_to("x",1300)
+        self.ev3_localization()
+        self.go_to("y",200)
+        self.ev3_localization()
+        ########
 
 if __name__ == '__main__':
     robot_map = make_map.map_for_robot()
