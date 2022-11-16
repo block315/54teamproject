@@ -60,6 +60,7 @@ class ev3robot:
             sleep(1)
             self.ev3_position_update(safe_distance)
             self.ev3_search()
+        self.ev3_localization()
 
     def ev3_position_update(self, safe_distance):
         sleep(2) # robot slides...
@@ -70,6 +71,11 @@ class ev3robot:
         self.ev3_position[1] += distance * 10 * cos(radians(self.ev3_position[2]))
         try:
             self.ev3_map.iloc[round(self.ev3_position[1]/10)-1,round(self.ev3_position[0]/10)-1] = 1
+            x,y = self.ev3_position[0],self.ev3_position[1]
+            x -= 1
+            y -= 1
+            for i in range(self.robot_width//2):
+                self.ev3_map.iloc[y-i:y+i,x-i:x+i] = 1
             print("robot position - x :", self.ev3_position[0],"y :",self.ev3_position[1])
         except:
             print("error" + str(self.ev3_position))
@@ -114,6 +120,7 @@ class ev3robot:
 
     
     def ev3_localization(self):
+        self.reset_dir()
         for i in range(8):
             self.ev3_turn("left",45)
 
@@ -184,13 +191,47 @@ class ev3robot:
             else:
                 print("can't find destination")
 
+    def reset_dir(self,mapsize=[3000,1500],limit=200):
+        # mapsize : [x length, y length] mm
+        if mapsize[0] - self.ev3_position[0]<limit:
+            self.rotate_to(90)
+            self.turn_for_reset()
+            #self.ev3_position[0] = mapsize[0] - self.ev3_eye.distance_centimeters*10
+        elif self.ev3_position[0]<limit:
+            self.rotate_to(270)
+            self.turn_for_reset()
+            #self.ev3_position[0] = self.ev3_eye.distance_centimeters*10
+        elif mapsize[1] - self.ev3_position[1]<limit:
+            self.rotate_to(0)
+            self.turn_for_reset()
+            #self.ev3_position[1] = mapsize[1] - self.ev3_eye.distance_centimeters*10
+        elif self.ev3_position[1]<limit:
+            self.rotate_to(180)
+            self.turn_for_reset()
+            #self.ev3_position[1] = self.ev3_eye.distance_centimeters*10
+        else:
+            print("reseting is not available : too far from wall")
+        sleep(2)
+
+    def turn_for_reset(self, precision = 40):
+            self.ev3_engine.on_for_rotations(-1 * SpeedPercent(25),SpeedPercent(25), 0.2)
+            safe_distance = 10000
+            while True:
+                self.ev3_engine.wait_until_not_moving()
+                sleep(0.2)
+                safe_distance = self.ev3_eye.distance_centimeters
+                self.ev3_engine.on_for_rotations(SpeedPercent(25),-1 * SpeedPercent(25), 1/precision)
+                print("Ultrasonic Value for reset :", self.ev3_eye.distance_centimeters)
+                if (safe_distance - self.ev3_eye.distance_centimeters<-0.2):
+                    break
+                sleep(0.2)
+            self.ev3_engine.on_for_rotations(SpeedPercent(25),-1 * SpeedPercent(25), (precision/40)/precision)
+
     def main(self):
         ### robot act code ###
         self.ev3_localization()
         self.go_to("x",1300)
-        self.ev3_localization()
-        self.go_to("y",200)
-        self.ev3_localization()
+        self.go_to("y",400)
         ########
 
 if __name__ == '__main__':
