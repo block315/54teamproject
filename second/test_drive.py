@@ -55,7 +55,7 @@ def left(state):
     if state:
         print('Left button pressed')
         sleep(1)
-        ev3_engine.on_for_seconds(-1*robot_balance[0]*rotate_speed,robot_balance[1]*rotate_speed,1)
+        ev3_engine.on_for_seconds(-1*robot_balance[0]*rotate_speed,robot_balance[1]*rotate_speed,0.4)
         ev3_command.append("left")
     else:
         print('Left button released')
@@ -66,7 +66,7 @@ def right(state):
     if state:
         print('right button pressed')
         sleep(1)
-        ev3_engine.on_for_seconds(robot_balance[0]*rotate_speed,-1*robot_balance[1]*rotate_speed,1)
+        ev3_engine.on_for_seconds(robot_balance[0]*rotate_speed,-1*robot_balance[1]*rotate_speed,0.4)
         ev3_command.append("right")
     else:
         print('right button released')
